@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -52,23 +53,19 @@ export function SettingsPanel() {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1.5">
-            <Label className="text-xs">Opens at</Label>
-            <Input
-              type="datetime-local"
-              value={schema.settings.opensAt ?? ""}
-              onChange={(e) => setSetting("opensAt", e.target.value || undefined)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Closes at</Label>
-            <Input
-              type="datetime-local"
-              value={schema.settings.closesAt ?? ""}
-              onChange={(e) => setSetting("closesAt", e.target.value || undefined)}
-            />
-          </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Opens at</Label>
+          <DateTimePicker
+            value={schema.settings.opensAt}
+            onChange={(v) => setSetting("opensAt", v)}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Closes at</Label>
+          <DateTimePicker
+            value={schema.settings.closesAt}
+            onChange={(v) => setSetting("closesAt", v)}
+          />
         </div>
 
         <div className="space-y-1.5">

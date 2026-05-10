@@ -77,9 +77,11 @@ Browser (Next.js) ─► Walrus blob store     ◄─ form schemas, submissions,
 
 The dashboard lists forms by querying `events::FormCreated` for the connected wallet, then fetches `Form` objects and their schema blobs. Submissions are listed via `events::SubmissionReceived` filtered by form_id, then their payload blobs are fetched and (for placeholder envelopes) decoded for display.
 
-## Seal placeholder mode
+## Seal mainnet key servers
 
-`NEXT_PUBLIC_SEAL_KEY_SERVERS` is empty by default — private fields use a base64 envelope marked `mode: "placeholder"` so the rest of the pipeline runs end-to-end. **This is not real encryption.** Replace with mainnet key server object IDs and the SDK's `SealClient.encrypt` / `decrypt` becomes active. All `TODO_SEAL` markers in the codebase point to the wiring that needs final IDs.
+Tideform uses the **H2O Nodes Open mainnet key server** (`0x4a65…7286a`) — publicly available, no signup. Single-server config = threshold 1. For stronger guarantees add more verified providers (Ruby Nodes, Overclock, Enoki, etc.) and bump threshold accordingly.
+
+If `NEXT_PUBLIC_SEAL_KEY_SERVERS` is left empty, private fields fall back to a base64 envelope marked `mode: "placeholder"` (NOT real encryption) so the rest of the pipeline still runs for local development.
 
 ## Hackathon checklist
 
