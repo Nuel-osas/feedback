@@ -5,6 +5,7 @@ use sui::clock;
 use sui::test_scenario as ts;
 use tideform::form::{Self, Form};
 use tideform::submission::{Self, Submission};
+use tideform::acl;
 
 const OWNER: address = @0xA;
 const ALICE: address = @0xB;
@@ -127,6 +128,54 @@ fun cannot_submit_to_closed_form() {
     scenario.next_tx(ALICE);
     submission::submit(&mut form, b"sub", &clk, scenario.ctx());
 
+    ts::return_shared(form);
+    clock::destroy_for_testing(clk);
+    scenario.end();
+}
+
+#[test]
+fun seal_approve_admin_passes() {
+    let mut scenario = ts::begin(OWNER);
+    let clk = clock::create_for_testing(scenario.ctx());
+    form::create(b"schema", false, false, &clk, scenario.ctx());
+    scenario.next_tx(OWNER);
+    let form = scenario.take_shared<Form>();
+    let form_id_bytes = object::id(&form).to_bytes();
+    let mut id = form_id_bytes;
+    id.append(b":fieldX:nonce");
+    acl::seal_approve(&form, id, scenario.ctx());
+    ts::return_shared(form);
+    clock::destroy_for_testing(clk);
+    scenario.end();
+}
+
+#[test]
+#[expected_failure(abort_code = tideform::acl::ENotAdmin)]
+fun seal_approve_non_admin_fails() {
+    let mut scenario = ts::begin(OWNER);
+    let clk = clock::create_for_testing(scenario.ctx());
+    form::create(b"schema", false, false, &clk, scenario.ctx());
+    scenario.next_tx(ALICE);
+    let form = scenario.take_shared<Form>();
+    let form_id_bytes = object::id(&form).to_bytes();
+    let mut id = form_id_bytes;
+    id.append(b":fieldX:nonce");
+    acl::seal_approve(&form, id, scenario.ctx());
+    ts::return_shared(form);
+    clock::destroy_for_testing(clk);
+    scenario.end();
+}
+
+#[test]
+#[expected_failure(abort_code = tideform::acl::EIdentityMismatch)]
+fun seal_approve_wrong_form_id_fails() {
+    let mut scenario = ts::begin(OWNER);
+    let clk = clock::create_for_testing(scenario.ctx());
+    form::create(b"schema", false, false, &clk, scenario.ctx());
+    scenario.next_tx(OWNER);
+    let form = scenario.take_shared<Form>();
+    let id = b"deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef:fieldX";
+    acl::seal_approve(&form, id, scenario.ctx());
     ts::return_shared(form);
     clock::destroy_for_testing(clk);
     scenario.end();
