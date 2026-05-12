@@ -13,7 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { uploadJson } from "@/lib/walrus";
-import { txCreateForm, txUpdateSchema } from "@/lib/move";
+import { addCreateForm, addUpdateSchema } from "@/lib/move";
 import { suiClient, PACKAGE_ID } from "@/lib/sui";
 import { FieldPalette } from "./field-palette";
 import { FieldList } from "./field-list";
@@ -57,36 +57,47 @@ export function Builder({ existingFormId }: { existingFormId?: string }) {
       const ownerAddress = account.address;
       const exec = async (transaction: Parameters<typeof signAndExecute>[0]["transaction"]) =>
         signAndExecute({ transaction });
+
       toast.info("Encoding form schema…");
-      const { blobId } = await uploadJson(schema, {
+      const result = await uploadJson(schema, {
         owner: ownerAddress,
         signAndExecute: (transaction) => exec(transaction),
         epochs: 53, // Walrus mainnet caps at 53 epochs (~2 years)
         onProgress: (p) => {
-          if (p.step === "encoded") toast.info("Sign register tx…");
+          if (p.step === "encoded") toast.info("Sign register tx (1/2)…");
           else if (p.step === "registered") toast.info("Uploading to Walrus…");
-          else if (p.step === "uploaded") toast.info("Sign certify tx…");
+          else if (p.step === "uploaded")
+            toast.info(
+              existingFormId
+                ? "Sign certify + update (2/2)…"
+                : "Sign certify + create form (2/2)…",
+            );
+        },
+        // Bundle our form::create/update_schema into the certify PTB —
+        // saves a popup.
+        appendToCertify: (tx, blobId) => {
+          if (existingFormId) {
+            addUpdateSchema(tx, {
+              formId: existingFormId,
+              newSchemaBlobId: blobId,
+            });
+          } else {
+            addCreateForm(tx, {
+              schemaBlobId: blobId,
+              requireWallet: schema.settings.requireWallet,
+              onePerWallet: schema.settings.onePerWallet,
+            });
+          }
         },
       });
-
-      const tx = existingFormId
-        ? txUpdateSchema({ formId: existingFormId, newSchemaBlobId: blobId })
-        : txCreateForm({
-            schemaBlobId: blobId,
-            requireWallet: schema.settings.requireWallet,
-            onePerWallet: schema.settings.onePerWallet,
-          });
-
-      toast.info("Signing transaction…");
-      const result = await signAndExecute({ transaction: tx });
 
       if (existingFormId) {
         toast.success("Form updated");
         router.refresh();
       } else {
-        await suiClient.waitForTransaction({ digest: result.digest });
+        await suiClient.waitForTransaction({ digest: result.finalTxDigest });
         const fullTx = await suiClient.getTransactionBlock({
-          digest: result.digest,
+          digest: result.finalTxDigest,
           options: { showEffects: true, showObjectChanges: true },
         });
         const created = fullTx.objectChanges?.find(

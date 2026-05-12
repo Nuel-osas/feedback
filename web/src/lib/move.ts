@@ -3,12 +3,12 @@ import { PACKAGE_ID } from "./sui";
 
 const CLOCK_ID = "0x6";
 
-export function txCreateForm(args: {
-  schemaBlobId: string;
-  requireWallet: boolean;
-  onePerWallet: boolean;
-}): Transaction {
-  const tx = new Transaction();
+// ---------- append-style helpers (for PTB bundling) ----------
+
+export function addCreateForm(
+  tx: Transaction,
+  args: { schemaBlobId: string; requireWallet: boolean; onePerWallet: boolean },
+) {
   tx.moveCall({
     target: `${PACKAGE_ID}::form::create`,
     arguments: [
@@ -18,14 +18,12 @@ export function txCreateForm(args: {
       tx.object(CLOCK_ID),
     ],
   });
-  return tx;
 }
 
-export function txUpdateSchema(args: {
-  formId: string;
-  newSchemaBlobId: string;
-}): Transaction {
-  const tx = new Transaction();
+export function addUpdateSchema(
+  tx: Transaction,
+  args: { formId: string; newSchemaBlobId: string },
+) {
   tx.moveCall({
     target: `${PACKAGE_ID}::form::update_schema`,
     arguments: [
@@ -34,6 +32,39 @@ export function txUpdateSchema(args: {
       tx.object(CLOCK_ID),
     ],
   });
+}
+
+export function addSubmit(
+  tx: Transaction,
+  args: { formId: string; blobId: string },
+) {
+  tx.moveCall({
+    target: `${PACKAGE_ID}::submission::submit`,
+    arguments: [
+      tx.object(args.formId),
+      tx.pure.vector("u8", new TextEncoder().encode(args.blobId)),
+      tx.object(CLOCK_ID),
+    ],
+  });
+}
+
+// ---------- standalone tx builders ----------
+
+export function txCreateForm(args: Parameters<typeof addCreateForm>[1]): Transaction {
+  const tx = new Transaction();
+  addCreateForm(tx, args);
+  return tx;
+}
+
+export function txUpdateSchema(args: Parameters<typeof addUpdateSchema>[1]): Transaction {
+  const tx = new Transaction();
+  addUpdateSchema(tx, args);
+  return tx;
+}
+
+export function txSubmit(args: Parameters<typeof addSubmit>[1]): Transaction {
+  const tx = new Transaction();
+  addSubmit(tx, args);
   return tx;
 }
 
@@ -60,19 +91,6 @@ export function txRemoveAdmin(args: { formId: string; admin: string }): Transact
   tx.moveCall({
     target: `${PACKAGE_ID}::form::remove_admin`,
     arguments: [tx.object(args.formId), tx.pure.address(args.admin)],
-  });
-  return tx;
-}
-
-export function txSubmit(args: { formId: string; blobId: string }): Transaction {
-  const tx = new Transaction();
-  tx.moveCall({
-    target: `${PACKAGE_ID}::submission::submit`,
-    arguments: [
-      tx.object(args.formId),
-      tx.pure.vector("u8", new TextEncoder().encode(args.blobId)),
-      tx.object(CLOCK_ID),
-    ],
   });
   return tx;
 }

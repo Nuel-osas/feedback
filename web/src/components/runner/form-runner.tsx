@@ -13,7 +13,7 @@ import { FieldRenderer } from "@/components/builder/field-renderer";
 import type { FormSchema, Field, Submission } from "@/lib/schema";
 import { uploadBlob, uploadJson } from "@/lib/walrus";
 import { sealEncrypt } from "@/lib/seal";
-import { txSubmit } from "@/lib/move";
+import { addSubmit } from "@/lib/move";
 import { PACKAGE_ID } from "@/lib/sui";
 
 type Values = Record<string, unknown>;
@@ -165,23 +165,23 @@ export function FormRunner({
         }
       }
 
-      // 3. upload submission blob
-      toast.info("Uploading submission to Walrus…");
-      const { blobId } = await uploadJson(submission, {
+      // 3. upload submission blob + bundle submission::submit into certify PTB
+      toast.info("Encoding submission…");
+      const result = await uploadJson(submission, {
         owner: ownerAddress,
         signAndExecute: execTx,
         epochs: 53,
         onProgress: (p) => {
-          if (p.step === "registered") toast.info("Walrus upload…");
+          if (p.step === "encoded") toast.info("Sign register tx (1/2)…");
+          else if (p.step === "registered") toast.info("Uploading to Walrus…");
+          else if (p.step === "uploaded") toast.info("Sign certify + submit (2/2)…");
+        },
+        appendToCertify: (tx, blobId) => {
+          addSubmit(tx, { formId, blobId });
         },
       });
 
-      // 4. submit on-chain
-      toast.info("Recording on Sui…");
-      const tx = txSubmit({ formId, blobId });
-      const result = await signAndExecute({ transaction: tx });
-
-      setDone({ submissionBlobId: blobId, txDigest: result.digest });
+      setDone({ submissionBlobId: result.blobId, txDigest: result.finalTxDigest });
       toast.success("Submission recorded");
     } catch (e) {
       console.error(e);

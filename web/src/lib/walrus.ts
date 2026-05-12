@@ -41,6 +41,26 @@ export type UploadProgress =
 
 export type ExecuteTxFn = (tx: Transaction) => Promise<{ digest: string }>;
 
+/** Mutate the certify tx before it's signed — used to bundle extra moveCalls
+ *  (e.g. our form::create / submission::submit) into the same PTB, saving a popup. */
+export type AppendToCertify = (tx: Transaction, blobId: string) => void;
+
+export type UploadArgs = {
+  owner: string;
+  signAndExecute: ExecuteTxFn;
+  epochs?: number;
+  onProgress?: (p: UploadProgress) => void;
+  /** Optional: extra moveCalls to append to the certify tx (bundled PTB). */
+  appendToCertify?: AppendToCertify;
+};
+
+export type UploadResult = {
+  blobId: string;
+  blobObjectId: string;
+  /** Digest of the certify (and bundled) tx. */
+  finalTxDigest: string;
+};
+
 /**
  * Upload bytes to Walrus using the user's wallet.
  *
@@ -49,22 +69,17 @@ export type ExecuteTxFn = (tx: Transaction) => Promise<{ digest: string }>;
  *   2. Wallet signs a register tx — costs WAL (storage) + SUI (gas).
  *   3. SDK uploads encoded data to Mysten's upload relay, relay returns
  *      a certificate signed by the storage committee.
- *   4. Wallet signs a certify tx using the certificate.
+ *   4. Wallet signs a certify tx (optionally bundled with caller's moveCalls).
  *
  * Cost is paid by `args.owner` (the connected wallet).
  */
 export async function uploadBlob(
   bytes: Uint8Array,
-  args: {
-    owner: string;
-    signAndExecute: ExecuteTxFn;
-    epochs?: number;
-    onProgress?: (p: UploadProgress) => void;
-  },
-): Promise<{ blobId: string; blobObjectId: string }> {
+  args: UploadArgs,
+): Promise<UploadResult> {
   const flow = client().writeBlobFlow({ blob: bytes });
 
-  await flow.encode();
+  const encoded = await flow.encode();
   args.onProgress?.({ step: "encoded" });
 
   const registerTx = flow.register({
@@ -79,22 +94,24 @@ export async function uploadBlob(
   args.onProgress?.({ step: "uploaded" });
 
   const certifyTx = flow.certify();
-  await args.signAndExecute(certifyTx);
+  if (args.appendToCertify) {
+    args.appendToCertify(certifyTx, encoded.blobId);
+  }
+  const { digest: finalDigest } = await args.signAndExecute(certifyTx);
   args.onProgress?.({ step: "certified" });
 
   const blob = await flow.getBlob();
-  return { blobId: blob.blobId, blobObjectId: blob.blobObjectId };
+  return {
+    blobId: blob.blobId,
+    blobObjectId: blob.blobObjectId,
+    finalTxDigest: finalDigest,
+  };
 }
 
 export async function uploadJson<T>(
   payload: T,
-  args: {
-    owner: string;
-    signAndExecute: ExecuteTxFn;
-    epochs?: number;
-    onProgress?: (p: UploadProgress) => void;
-  },
-): Promise<{ blobId: string; blobObjectId: string }> {
+  args: UploadArgs,
+): Promise<UploadResult> {
   const bytes = new TextEncoder().encode(JSON.stringify(payload));
   return uploadBlob(bytes, args);
 }
