@@ -68,7 +68,11 @@ export async function fetchFormSchema(blobId: string): Promise<FormSchema> {
  * List forms owned by an address by querying FormCreated events.
  * Filters off-chain to those whose owner matches.
  */
-export async function listFormsForOwner(owner: string): Promise<FormSummary[]> {
+export type FormSummaryWithTitle = FormSummary & { title?: string };
+
+export async function listFormsForOwner(
+  owner: string,
+): Promise<FormSummaryWithTitle[]> {
   if (PACKAGE_ID === "0x0") return [];
   const events = await suiClient.queryEvents({
     query: { MoveEventType: `${EVENT_PACKAGE}::events::FormCreated` },
@@ -81,8 +85,25 @@ export async function listFormsForOwner(owner: string): Promise<FormSummary[]> {
     .map((e) => (e.parsedJson as { form_id?: string })?.form_id)
     .filter((id): id is string => !!id);
 
-  const forms = await Promise.all(ids.map((id: string) => fetchForm(id).catch(() => null)));
-  return forms.filter((f): f is FormSummary => f !== null);
+  const summaries = await Promise.all(
+    ids.map((id) => fetchForm(id).catch(() => null)),
+  );
+
+  // Fetch each form's schema (lives on Walrus) in parallel so we can show
+  // the title in dashboards. Failures fall through to the object ID.
+  const withTitles = await Promise.all(
+    summaries.map(async (s) => {
+      if (!s) return null;
+      try {
+        const schema = await fetchFormSchema(s.schemaBlobId);
+        return { ...s, title: schema.title } as FormSummaryWithTitle;
+      } catch {
+        return s as FormSummaryWithTitle;
+      }
+    }),
+  );
+
+  return withTitles.filter((f): f is FormSummaryWithTitle => f !== null);
 }
 
 /**

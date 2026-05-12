@@ -52,14 +52,22 @@ export function FormList() {
             <Card key={f.id} className="hover:border-sky-500/50 transition-colors">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center justify-between gap-2">
-                  <Link href={`/app/${f.id}`} className="flex items-center gap-2 hover:underline">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    <span className="truncate">{f.id.slice(0, 10)}…</span>
+                  <Link
+                    href={`/app/${f.id}`}
+                    className="flex items-center gap-2 hover:underline min-w-0 flex-1"
+                  >
+                    <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="truncate">
+                      {f.title?.trim() || `${f.id.slice(0, 10)}…`}
+                    </span>
                   </Link>
                   <Badge variant={f.status === 0 ? "success" : "secondary"}>
                     {f.status === 0 ? "open" : f.status === 1 ? "closed" : "archived"}
                   </Badge>
                 </CardTitle>
+                <p className="text-xs text-muted-foreground font-mono truncate">
+                  {f.id.slice(0, 14)}…{f.id.slice(-4)}
+                </p>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <p className="text-muted-foreground">
