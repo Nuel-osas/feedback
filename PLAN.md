@@ -448,6 +448,44 @@ Buffer: half-day at end for unforeseen breakage.
 
 ---
 
+## 16.5 TODO — AI / LLM features (not yet implemented)
+
+Deferred for after the hackathon submission. Captured here so they don't get lost.
+
+### TODO-AI-1: AI-assisted form creation
+
+Goal: a user describes the form they want in plain English (or another language), and Tideform scaffolds an editable schema before they drop into the builder.
+
+UX shape:
+- Land on `/app/new` → "Describe your form" textarea + "Start from scratch" link below.
+- Submit prompt → LLM (Claude Opus 4.7 via Anthropic API) returns a `FormSchema` JSON conforming to `web/src/lib/schema.ts`.
+- Render in the builder, dirty-flagged, user can edit before publishing.
+
+Notes:
+- Use structured output / tool-use so the LLM emits valid `FormSchema`. Validate with the existing zod schema; if it fails, retry once with the validation errors as feedback.
+- Keep the LLM call server-side (Next.js Route Handler) so the API key doesn't leak.
+- Cache prompt → schema pairs in Vercel KV (optional) for repeat traffic.
+- Cost: probably <$0.02 per generation with Sonnet 4.6; <$0.10 with Opus.
+
+### TODO-AI-2: Speech-to-execute on the LLM
+
+Goal: user clicks a mic button, speaks ("change the rating field to 10 stars", "add a wallet address field after the email"), the LLM mutates the current schema.
+
+UX shape:
+- Mic button in the builder header.
+- Browser SpeechRecognition API (webkit) captures audio → transcript.
+- Transcript + current `FormSchema` → LLM with a tool-use schema for in-place edits (addField, updateField, removeField, moveField, setSetting).
+- Apply tool calls to the Zustand builder store one-by-one with optimistic UI.
+- Show transcript + a list of applied changes ("✓ Added rating field 'Quality'").
+
+Notes:
+- Use `claude-opus-4-7` for accuracy on multi-step instructions; falls back to `claude-haiku-4-5` for low-latency single edits.
+- Webkit SpeechRecognition works on Chrome desktop + iOS Safari; Firefox doesn't. Fall back to a typed prompt in the same modal.
+- Cap turns per session; rate-limit to ~10 commands/min.
+- Privacy: process the transcript server-side, never log it.
+
+---
+
 ## 17. Stretch Goals (only if time)
 
 - Conditional logic builder UI (visual rule editor).

@@ -7,6 +7,8 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SubmissionsTable } from "@/components/admin/submissions-table";
+import { Analytics } from "@/components/admin/analytics";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { fetchForm, fetchFormSchema, type FormSummary } from "@/lib/indexer";
 import type { FormSchema } from "@/lib/schema";
 
@@ -89,7 +91,20 @@ export default function FormDashboard({
         </div>
       </div>
 
-      <SubmissionsTable formId={formId} schema={schema} />
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="submissions">
+            Submissions ({summary.submissionsCount})
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="overview">
+          <Analytics formId={formId} schema={schema} />
+        </TabsContent>
+        <TabsContent value="submissions">
+          <SubmissionsTable formId={formId} schema={schema} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
