@@ -1,8 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { useSignAndExecuteTransaction } from "@mysten/dapp-kit";
-import { ExternalLink, Loader2 } from "lucide-react";
+import {
+  useCurrentAccount,
+  useSignAndExecuteTransaction,
+  useSignPersonalMessage,
+} from "@mysten/dapp-kit";
+import { Eye, ExternalLink, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -30,6 +34,9 @@ import {
   txSubmissionPriority,
   txSubmissionStatus,
 } from "@/lib/move";
+import { sealDecrypt, type SealEnvelope } from "@/lib/seal";
+import { getOrCreateSessionKey } from "@/lib/session-key";
+import { PACKAGE_ID } from "@/lib/sui";
 import type { FormSchema, Field, Submission } from "@/lib/schema";
 import type { SubmissionSummary } from "@/lib/indexer";
 
@@ -64,9 +71,59 @@ export function SubmissionDrawer({
   fields: Field[];
   onChanged: () => void;
 }) {
+  const account = useCurrentAccount();
   const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
+  const { mutateAsync: signPersonalMessage } = useSignPersonalMessage();
   const [busy, setBusy] = useState(false);
   const [notes, setNotes] = useState("");
+  const [revealed, setRevealed] = useState<Record<string, unknown>>({});
+  const [revealing, setRevealing] = useState<Record<string, boolean>>({});
+
+  async function revealField(fieldId: string, envelope: SealEnvelope) {
+    if (!account) {
+      toast.error("Connect wallet to decrypt");
+      return;
+    }
+    if (envelope.mode === "placeholder") {
+      // local-dev fallback: just base64-decode
+      try {
+        const bytes = await sealDecrypt(envelope, {
+          // unused in placeholder branch; cast satisfies the type
+          // biome-ignore lint/suspicious/noExplicitAny: placeholder path skips session key
+          sessionKey: undefined as any,
+          packageId: PACKAGE_ID,
+          formId,
+        });
+        const value = JSON.parse(new TextDecoder().decode(bytes));
+        setRevealed((r) => ({ ...r, [fieldId]: value }));
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Decrypt failed");
+      }
+      return;
+    }
+
+    setRevealing((r) => ({ ...r, [fieldId]: true }));
+    try {
+      const sessionKey = await getOrCreateSessionKey({
+        address: account.address,
+        packageId: PACKAGE_ID,
+        signMessage: async (msg) =>
+          signPersonalMessage({ message: msg }),
+      });
+      const bytes = await sealDecrypt(envelope, {
+        sessionKey,
+        packageId: PACKAGE_ID,
+        formId,
+      });
+      const value = JSON.parse(new TextDecoder().decode(bytes));
+      setRevealed((r) => ({ ...r, [fieldId]: value }));
+    } catch (e) {
+      console.error(e);
+      toast.error(e instanceof Error ? e.message : "Decrypt failed");
+    } finally {
+      setRevealing((r) => ({ ...r, [fieldId]: false }));
+    }
+  }
 
   if (!submission) return null;
 
@@ -184,10 +241,21 @@ export function SubmissionDrawer({
         <div className="space-y-3 border-t border-border pt-4">
           {fields.map((f) => {
             const v = payload?.fields[f.id];
+            const decrypted = revealed[f.id];
             return (
               <div key={f.id} className="space-y-1">
                 <p className="text-xs font-medium">{f.label}</p>
-                <FieldDisplay field={f} value={v} />
+                <FieldDisplay
+                  field={f}
+                  value={v}
+                  decrypted={decrypted}
+                  revealing={!!revealing[f.id]}
+                  onReveal={() => {
+                    if (v?.kind === "encrypted") {
+                      revealField(f.id, v.envelope as SealEnvelope);
+                    }
+                  }}
+                />
               </div>
             );
           })}
@@ -221,7 +289,19 @@ export function SubmissionDrawer({
   );
 }
 
-function FieldDisplay({ field, value }: { field: Field; value: Submission["fields"][string] | undefined }) {
+function FieldDisplay({
+  field,
+  value,
+  decrypted,
+  revealing,
+  onReveal,
+}: {
+  field: Field;
+  value: Submission["fields"][string] | undefined;
+  decrypted?: unknown;
+  revealing?: boolean;
+  onReveal?: () => void;
+}) {
   if (!value) return <p className="text-xs text-muted-foreground">—</p>;
   if (value.kind === "plaintext") {
     const v = value.value;
@@ -257,10 +337,37 @@ function FieldDisplay({ field, value }: { field: Field; value: Submission["field
     );
   }
   if (value.kind === "encrypted") {
+    if (decrypted !== undefined) {
+      if (Array.isArray(decrypted)) {
+        return (
+          <div className="flex flex-wrap gap-1">
+            {decrypted.map((x, i) => (
+              <Badge key={i} variant="secondary">{String(x)}</Badge>
+            ))}
+          </div>
+        );
+      }
+      return (
+        <p className="text-sm whitespace-pre-line break-words bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 rounded px-2 py-1">
+          {String(decrypted)}
+        </p>
+      );
+    }
     return (
-      <Badge variant="warning">
-        encrypted ({value.envelope.mode}) — {value.envelope.b64.length} bytes
-      </Badge>
+      <div className="flex items-center gap-2">
+        <Badge variant="warning">
+          encrypted ({value.envelope.mode})
+        </Badge>
+        <button
+          type="button"
+          onClick={onReveal}
+          disabled={revealing}
+          className="text-xs underline text-sky-600 hover:text-sky-700 disabled:opacity-50 inline-flex items-center gap-1"
+        >
+          {revealing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Eye className="h-3 w-3" />}
+          Reveal
+        </button>
+      </div>
     );
   }
   return null;

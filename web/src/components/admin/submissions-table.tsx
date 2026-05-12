@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { fetchSubmissionPayload, listSubmissions } from "@/lib/indexer";
 import type { FormSchema, Submission } from "@/lib/schema";
-import { sealDecrypt, type SealEnvelope } from "@/lib/seal";
+// no auto-decrypt — admin presses Reveal in the drawer to invoke Seal
 import { blobUrl } from "@/lib/walrus";
 import { shortAddress } from "@/lib/utils";
 import { exportCSV, exportJSON } from "@/lib/export";
@@ -51,23 +51,7 @@ export function SubmissionsTable({
       await Promise.all(
         subs.map(async (s) => {
           try {
-            const payload = await fetchSubmissionPayload(s.blobId);
-            // best-effort decrypt placeholder envelopes (real Seal needs session key)
-            for (const [fid, fv] of Object.entries(payload.fields)) {
-              if (fv.kind === "encrypted" && fv.envelope.mode === "placeholder") {
-                try {
-                  const bytes = await sealDecrypt(fv.envelope as SealEnvelope);
-                  const text = new TextDecoder().decode(bytes);
-                  payload.fields[fid] = {
-                    kind: "plaintext",
-                    value: JSON.parse(text),
-                  };
-                } catch {
-                  // leave encrypted
-                }
-              }
-            }
-            out[s.id] = payload;
+            out[s.id] = await fetchSubmissionPayload(s.blobId);
           } catch {
             // skip
           }

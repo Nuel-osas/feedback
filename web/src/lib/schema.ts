@@ -120,7 +120,8 @@ export const EncryptedValue = z.object({
   envelope: z.object({
     mode: z.enum(["placeholder", "seal"]),
     b64: z.string(),
-    sealId: z.string().optional(),
+    /** Hex-encoded Seal identity bytes — only present when mode === "seal". */
+    id: z.string().optional(),
   }),
 });
 export const FieldValue = z.union([PlainValue, MediaValue, EncryptedValue]);

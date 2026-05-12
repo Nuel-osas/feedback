@@ -147,7 +147,11 @@ export function FormRunner({
         if (v === undefined || v === null || v === "") continue;
         if (f.private) {
           const bytes = new TextEncoder().encode(JSON.stringify(v));
-          const envelope = await sealEncrypt(bytes, { packageId: PACKAGE_ID, formId });
+          const envelope = await sealEncrypt(bytes, {
+            packageId: PACKAGE_ID,
+            formId,
+            fieldId: f.id,
+          });
           submission.fields[f.id] = { kind: "encrypted", envelope };
         } else {
           submission.fields[f.id] = { kind: "plaintext", value: v };
