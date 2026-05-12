@@ -84,6 +84,7 @@ export function Builder({ existingFormId }: { existingFormId?: string }) {
         toast.success("Form updated");
         router.refresh();
       } else {
+        await suiClient.waitForTransaction({ digest: result.digest });
         const fullTx = await suiClient.getTransactionBlock({
           digest: result.digest,
           options: { showEffects: true, showObjectChanges: true },
