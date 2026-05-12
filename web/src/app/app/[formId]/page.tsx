@@ -56,12 +56,14 @@ export default function FormDashboard({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold">{schema.title}</h1>
-          <p className="text-sm text-muted-foreground">
-            {summary.submissionsCount} submissions · v{summary.version} ·{" "}
-            <Badge variant={summary.status === 0 ? "success" : "secondary"} className="ml-1">
+          <div className="text-sm text-muted-foreground flex items-center gap-1.5">
+            <span>
+              {summary.submissionsCount} submissions · v{summary.version} ·
+            </span>
+            <Badge variant={summary.status === 0 ? "success" : "secondary"}>
               {summary.status === 0 ? "open" : summary.status === 1 ? "closed" : "archived"}
             </Badge>
-          </p>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button
