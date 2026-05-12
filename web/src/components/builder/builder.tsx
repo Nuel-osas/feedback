@@ -54,8 +54,20 @@ export function Builder({ existingFormId }: { existingFormId?: string }) {
     }
     setSaving(true);
     try {
-      toast.info("Uploading schema to Walrus…");
-      const { blobId } = await uploadJson(schema, { epochs: 100 });
+      const ownerAddress = account.address;
+      const exec = async (transaction: Parameters<typeof signAndExecute>[0]["transaction"]) =>
+        signAndExecute({ transaction });
+      toast.info("Encoding form schema…");
+      const { blobId } = await uploadJson(schema, {
+        owner: ownerAddress,
+        signAndExecute: (transaction) => exec(transaction),
+        epochs: 100,
+        onProgress: (p) => {
+          if (p.step === "encoded") toast.info("Sign register tx…");
+          else if (p.step === "registered") toast.info("Uploading to Walrus…");
+          else if (p.step === "uploaded") toast.info("Sign certify tx…");
+        },
+      });
 
       const tx = existingFormId
         ? txUpdateSchema({ formId: existingFormId, newSchemaBlobId: blobId })

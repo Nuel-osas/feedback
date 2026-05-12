@@ -167,11 +167,19 @@ export function SubmissionDrawer({
 
   async function saveNotes() {
     if (!submission || !notes.trim()) return;
+    if (!account) {
+      toast.error("Connect wallet first");
+      return;
+    }
     setBusy(true);
     try {
       const { blobId } = await uploadJson(
         { notes, savedAt: new Date().toISOString() },
-        { epochs: 53 },
+        {
+          owner: account.address,
+          signAndExecute: (transaction) => signAndExecute({ transaction }),
+          epochs: 53,
+        },
       );
       const tx = txAttachNotes({
         formId,

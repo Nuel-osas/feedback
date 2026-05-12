@@ -114,6 +114,9 @@ export function FormRunner({
     }
 
     setSubmitting(true);
+    const ownerAddress = account.address;
+    const execTx = (transaction: Parameters<typeof signAndExecute>[0]["transaction"]) =>
+      signAndExecute({ transaction });
     try {
       const submission: Submission = {
         formId,
@@ -129,7 +132,11 @@ export function FormRunner({
           const file = files[f.id];
           toast.info(`Uploading ${file.name}…`);
           const bytes = new Uint8Array(await file.arrayBuffer());
-          const { blobId } = await uploadBlob(bytes, { epochs: 53 });
+          const { blobId } = await uploadBlob(bytes, {
+            owner: ownerAddress,
+            signAndExecute: execTx,
+            epochs: 53,
+          });
           submission.fields[f.id] = {
             kind: "media",
             blobId,
@@ -160,7 +167,14 @@ export function FormRunner({
 
       // 3. upload submission blob
       toast.info("Uploading submission to Walrus…");
-      const { blobId } = await uploadJson(submission, { epochs: 53 });
+      const { blobId } = await uploadJson(submission, {
+        owner: ownerAddress,
+        signAndExecute: execTx,
+        epochs: 53,
+        onProgress: (p) => {
+          if (p.step === "registered") toast.info("Walrus upload…");
+        },
+      });
 
       // 4. submit on-chain
       toast.info("Recording on Sui…");
