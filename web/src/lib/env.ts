@@ -3,6 +3,15 @@ export const env = {
     | "mainnet"
     | "testnet",
   packageId: process.env.NEXT_PUBLIC_TIDEFORM_PACKAGE_ID ?? "0x0",
+  /**
+   * Origin (v1) package ID — used for event queries and on-chain types whose
+   * `type origin` is always the first published version, even after upgrades.
+   * Falls back to `packageId` if not set (pre-upgrade environments).
+   */
+  originalPackageId:
+    process.env.NEXT_PUBLIC_TIDEFORM_ORIGINAL_PACKAGE_ID ??
+    process.env.NEXT_PUBLIC_TIDEFORM_PACKAGE_ID ??
+    "0x0",
   walrusPublisher:
     process.env.NEXT_PUBLIC_WALRUS_PUBLISHER ??
     "https://publisher.walrus-testnet.walrus.space",

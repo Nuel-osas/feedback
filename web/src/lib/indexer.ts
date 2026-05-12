@@ -1,4 +1,7 @@
 import { suiClient, PACKAGE_ID } from "./sui";
+import { env } from "./env";
+
+const EVENT_PACKAGE = env.originalPackageId;
 import { readJson } from "./walrus";
 import type { FormSchema, Submission } from "./schema";
 
@@ -68,7 +71,7 @@ export async function fetchFormSchema(blobId: string): Promise<FormSchema> {
 export async function listFormsForOwner(owner: string): Promise<FormSummary[]> {
   if (PACKAGE_ID === "0x0") return [];
   const events = await suiClient.queryEvents({
-    query: { MoveEventType: `${PACKAGE_ID}::events::FormCreated` },
+    query: { MoveEventType: `${EVENT_PACKAGE}::events::FormCreated` },
     limit: 200,
     order: "descending",
   });
@@ -88,7 +91,7 @@ export async function listFormsForOwner(owner: string): Promise<FormSummary[]> {
 export async function listSubmissions(formId: string): Promise<SubmissionSummary[]> {
   if (PACKAGE_ID === "0x0") return [];
   const events = await suiClient.queryEvents({
-    query: { MoveEventType: `${PACKAGE_ID}::events::SubmissionReceived` },
+    query: { MoveEventType: `${EVENT_PACKAGE}::events::SubmissionReceived` },
     limit: 1000,
     order: "descending",
   });
