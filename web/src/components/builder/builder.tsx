@@ -61,7 +61,7 @@ export function Builder({ existingFormId }: { existingFormId?: string }) {
       const { blobId } = await uploadJson(schema, {
         owner: ownerAddress,
         signAndExecute: (transaction) => exec(transaction),
-        epochs: 100,
+        epochs: 53, // Walrus mainnet caps at 53 epochs (~2 years)
         onProgress: (p) => {
           if (p.step === "encoded") toast.info("Sign register tx…");
           else if (p.step === "registered") toast.info("Uploading to Walrus…");
