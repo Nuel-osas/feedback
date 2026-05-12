@@ -24,7 +24,9 @@ function client(): WalrusClient {
       wasmUrl: WASM_URL,
       uploadRelay: {
         host: UPLOAD_RELAY,
-        sendTip: { max: 1_000 }, // ≤ 1000 MIST tip to the relay
+        // Max tip cap. Mysten's mainnet relay charges ~2.5M MIST (~0.0025 SUI)
+        // per blob; 10M (~0.01 SUI) gives headroom without being abusive.
+        sendTip: { max: 10_000_000 },
       },
     });
   }
