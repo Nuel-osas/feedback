@@ -484,6 +484,68 @@ Notes:
 - Cap turns per session; rate-limit to ~10 commands/min.
 - Privacy: process the transcript server-side, never log it.
 
+### TODO-PAY-1: Abstract Walrus + Sui payments (sponsored txs)
+
+Goal: respondents don't need SUI, WAL, or a connected wallet to fill out a public form. Form creators shouldn't need to think about gas economics for low-value flows either.
+
+Today's UX:
+- 2 wallet popups per form publish (register + certify-bundled-with-create).
+- 2 wallet popups per submission, plus 2 more per media file.
+- Submitter pays their own SUI + WAL, must have both pre-funded.
+
+UX shape after:
+- Anonymous respondents can submit with just a "Sign in with Google" (see TODO-ZK-1) or even no sign-in at all.
+- Form creators see "Sponsored — paid by Tideform" badges next to fields that don't require a wallet.
+- A balance/quota indicator in the creator dashboard so they know how much sponsored capacity their forms have.
+
+Architectures to consider:
+1. **Mysten Enoki sponsored transactions** — Enoki signs gas on behalf of the user. Tideform funds an Enoki app key with SUI. Enoki returns a partially-signed gas object; the user (or zkLogin proof) signs the rest. Rate-limited per-app, configurable.
+2. **Walrus publisher we operate** — stand up our own `walrus-publisher` instance behind a CORS-permissive endpoint. Server holds WAL + SUI, accepts blob uploads from authenticated clients (HMAC or session-cookie), pays storage. Removes register/certify popups entirely for that path. Trade-off: we trust the publisher; harder to keep "Walrus-native" in a strict sense.
+3. **Server-side relayer for Sui txs** — Node service that receives an unsigned PTB + a client-provided signature, adds gas, executes. Same trust model as #1.
+
+Order to ship:
+1. Stand up our own Walrus publisher pointed at our package (eliminates ~80% of the popup count).
+2. Integrate Enoki for the remaining form::create / submission::submit txs.
+3. Add quota tracking + abuse limits (per-form, per-IP, per-zkLogin-sub).
+
+Notes:
+- Form-owner-paid model vs platform-paid model is a billing decision; default to platform-paid w/ a free quota.
+- Keep the **wallet-paid path as fallback** — power users / DAOs may want full sovereignty.
+- The Move ACL (`Form.admins`, `seal_approve`) doesn't change. zkLogin and sponsored txs still produce real Sui addresses; ACLs work as-is.
+
+### TODO-ZK-1: zkLogin onboarding
+
+Goal: remove the wallet-extension barrier. Anyone with a Google/Apple/Twitch/Facebook account can sign in, get a real Sui address derived via zkLogin, and use Tideform without installing anything.
+
+UX shape:
+- "Continue with Google" button on the public form page, the landing, and the dashboard login modal.
+- After OAuth, mint a zkLogin keypair, derive the user's Sui address, store the ephemeral key in `sessionStorage`.
+- Show "Signed in as alice@gmail.com (0xab…cd)" in the topbar.
+- Wallet extensions remain a parallel auth method — both paths land at the same `useCurrentAccount` shape.
+
+Pieces required:
+- `@mysten/zklogin` for proof generation.
+- A small Next.js Route Handler that proxies the OAuth callback and forwards the JWT to Mysten's prover service (or our self-hosted one).
+- Salt management — generate a per-user salt server-side, store it under a hash of the JWT's sub claim so the same identity always derives the same address.
+- Wire into existing dapp-kit `WalletProvider` — write a custom adapter that exposes zkLogin as a "wallet."
+
+Combines naturally with TODO-PAY-1: zkLogin users typically don't hold SUI, so they need sponsored gas to do anything useful on-chain.
+
+Privacy notes:
+- The OAuth provider learns the user signed into "Tideform"; it doesn't learn what they submitted (private fields are still Seal-encrypted).
+- The zkLogin proof is what's on-chain — the OAuth identity is not directly linkable to the Sui address without the salt.
+- Tideform's backend sees the salt and the address but never has access to private-field plaintext.
+
+### TODO-ZK-2 (stretch): anonymous-but-rate-limited submissions
+
+Goal: allow truly anonymous submissions (no OAuth, no wallet) that are still rate-limited and Sybil-resistant.
+
+Approach: zk-proof of group membership (e.g., "I hold a Walrus Sessions attendee NFT", or "I am in this allowlist") without revealing which group member. Tideform's contract checks the proof + a nullifier; nullifier prevents double-submission while preserving anonymity.
+
+Notes:
+- Probably out of scope for hackathon timeline.
+- Useful for whistleblower-style feedback channels.
+
 ---
 
 ## 17. Stretch Goals (only if time)
