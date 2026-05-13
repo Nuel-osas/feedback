@@ -1,6 +1,6 @@
 "use client";
 
-import { Star } from "lucide-react";
+import { Lock, Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -34,8 +34,11 @@ export function FieldRenderer({ field, value, onChange, onFile, disabled, error 
           {field.required && <span className="text-red-500 ml-0.5">*</span>}
         </span>
         {field.private && (
-          <span className="text-xs text-muted-foreground border border-border rounded px-1.5 py-0.5">
-            private
+          <span
+            className="text-[10px] text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 rounded px-1.5 py-0.5 inline-flex items-center gap-1"
+            title="Encrypted with Seal — only form admins can read this value"
+          >
+            <Lock className="h-2.5 w-2.5" /> private
           </span>
         )}
       </Label>

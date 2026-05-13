@@ -52,7 +52,7 @@ export const Field = z.object({
   help: z.string().optional(),
   placeholder: z.string().optional(),
   required: z.boolean().default(false),
-  private: z.boolean().default(false),
+  private: z.boolean().default(true),
   defaultValue: z.unknown().optional(),
   validation: Validation.optional(),
   options: z.array(FieldOption).optional(),
@@ -140,12 +140,18 @@ export type Submission = z.infer<typeof Submission>;
 // ---------- Field defaults helper ----------
 
 export function defaultFieldFor(type: FieldType, id: string): Field {
+  // New fields default to PRIVATE — submissions are confidential by default;
+  // creators must explicitly mark a field public (e.g. for transparent feedback).
+  // Media fields (screenshot, video) stay public because their content is the
+  // blob itself — encrypting media bytes is a heavier change deferred to a
+  // future task.
+  const isMedia = type === "screenshot" || type === "video";
   const base = {
     id,
     type,
     label: defaultLabelFor(type),
     required: false,
-    private: false,
+    private: !isMedia,
   } as Field;
   if (type === "dropdown" || type === "multi_select") {
     base.options = [

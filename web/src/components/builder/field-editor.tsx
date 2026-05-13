@@ -72,7 +72,9 @@ export function FieldEditor() {
           <div>
             <Label htmlFor={`priv-${field.id}`}>Private (encrypted)</Label>
             <p className="text-xs text-muted-foreground">
-              Stored encrypted. Only admins can read.
+              {field.private
+                ? "Seal-encrypted. Only form admins can decrypt."
+                : "Public — anyone with the Walrus blob ID can read this value."}
             </p>
           </div>
           <Switch
