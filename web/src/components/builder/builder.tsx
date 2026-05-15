@@ -17,7 +17,6 @@ import { addCreateForm, addUpdateSchema } from "@/lib/move";
 import { suiClient, PACKAGE_ID } from "@/lib/sui";
 import { FieldPalette } from "./field-palette";
 import { FieldList } from "./field-list";
-import { FieldEditor } from "./field-editor";
 import { SettingsPanel } from "./settings-panel";
 import { useBuilder } from "./store";
 
@@ -149,19 +148,16 @@ export function Builder({ existingFormId }: { existingFormId?: string }) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <div className="lg:col-span-3 space-y-4">
+        <div className="lg:col-span-4 xl:col-span-3 space-y-4">
           <FieldPalette />
           <SettingsPanel />
         </div>
-        <div className="lg:col-span-6">
+        <div className="lg:col-span-8 xl:col-span-9">
           <Card>
             <CardContent className="p-6">
               <FieldList />
             </CardContent>
           </Card>
-        </div>
-        <div className="lg:col-span-3">
-          <FieldEditor />
         </div>
       </div>
     </div>

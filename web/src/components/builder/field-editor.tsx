@@ -3,40 +3,21 @@
 import { Plus, X } from "lucide-react";
 import { nanoid } from "nanoid";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useBuilder, findField } from "./store";
 
-export function FieldEditor() {
+/** Bare field-settings body — embed inline anywhere a field row is expanded. */
+export function FieldEditorBody({ fieldId }: { fieldId: string }) {
   const schema = useBuilder((s) => s.schema);
-  const selectedId = useBuilder((s) => s.selectedFieldId);
   const update = useBuilder((s) => s.updateField);
-
-  if (!selectedId) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm">Field settings</CardTitle>
-        </CardHeader>
-        <CardContent className="text-xs text-muted-foreground">
-          Select a field to edit its properties.
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const field = findField(schema, selectedId);
+  const field = findField(schema, fieldId);
   if (!field) return null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm">Field: {field.label}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="space-y-4">
         <div className="space-y-1.5">
           <Label>Label</Label>
           <Input
@@ -201,8 +182,7 @@ export function FieldEditor() {
             />
           </div>
         )}
-      </CardContent>
-    </Card>
+    </div>
   );
 }
 

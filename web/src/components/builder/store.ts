@@ -39,6 +39,7 @@ const blankSchema: FormSchema = {
     onePerWallet: false,
     captcha: false,
     successMessage: "Thanks for your submission.",
+    style: "compact",
   },
   sections: [{ id: nanoid(8), fields: [] }],
 };

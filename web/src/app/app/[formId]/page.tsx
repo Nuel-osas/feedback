@@ -6,7 +6,7 @@ import { ExternalLink, Loader2, Pencil, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { SubmissionsTable } from "@/components/admin/submissions-table";
+import { SubmissionsInbox } from "@/components/admin/submissions-inbox";
 import { Analytics } from "@/components/admin/analytics";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { fetchForm, fetchFormSchema, type FormSummary } from "@/lib/indexer";
@@ -102,7 +102,7 @@ export default function FormDashboard({
           <Analytics formId={formId} schema={schema} />
         </TabsContent>
         <TabsContent value="submissions">
-          <SubmissionsTable formId={formId} schema={schema} />
+          <SubmissionsInbox formId={formId} schema={schema} />
         </TabsContent>
       </Tabs>
     </div>

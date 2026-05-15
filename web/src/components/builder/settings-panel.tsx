@@ -6,6 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useBuilder } from "./store";
 
 export function SettingsPanel() {
@@ -19,6 +26,26 @@ export function SettingsPanel() {
         <CardTitle className="text-sm">Form settings</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="space-y-1.5">
+          <Label className="text-xs">Style</Label>
+          <Select
+            value={schema.settings.style ?? "compact"}
+            onValueChange={(v) =>
+              setSetting("style", v as "conversational" | "compact")
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="compact">Compact (all on one page)</SelectItem>
+              <SelectItem value="conversational">
+                Conversational (one question at a time)
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="flex items-center justify-between">
           <div>
             <Label>Require wallet</Label>

@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { FormRunner } from "@/components/runner/form-runner";
+import { ConversationalRunner } from "@/components/runner/conversational-runner";
 import { fetchForm, fetchFormSchema } from "@/lib/indexer";
 import type { FormSchema } from "@/lib/schema";
 
@@ -59,8 +60,10 @@ export default function PublicFormPage({
         This form is closed and not accepting submissions.
       </div>
     );
+  const Runner =
+    data.schema.settings.style === "conversational" ? ConversationalRunner : FormRunner;
   return (
-    <FormRunner
+    <Runner
       formId={formId}
       formVersion={data.version}
       schema={data.schema}

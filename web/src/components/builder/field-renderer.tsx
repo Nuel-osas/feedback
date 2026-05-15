@@ -28,10 +28,16 @@ export function FieldRenderer({ field, value, onChange, onFile, disabled, error 
   const id = `field-${field.id}`;
   return (
     <div className="space-y-2">
-      <Label htmlFor={id} className="flex items-center gap-2">
+      <Label htmlFor={id} className="flex items-center gap-2 flex-wrap">
         <span>
           {field.label}
-          {field.required && <span className="text-red-500 ml-0.5">*</span>}
+          {field.required ? (
+            <span className="text-red-500 ml-0.5">*</span>
+          ) : (
+            <span className="text-muted-foreground ml-1.5 text-[11px] font-normal">
+              (optional)
+            </span>
+          )}
         </span>
         {field.private && (
           <span

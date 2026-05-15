@@ -17,11 +17,12 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, GripVertical, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useBuilder } from "./store";
 import { FieldRenderer } from "./field-renderer";
+import { FieldEditorBody } from "./field-editor";
 import { cn } from "@/lib/utils";
 import type { Field } from "@/lib/schema";
 
@@ -105,39 +106,69 @@ function SortableFieldRow({
     <div ref={setNodeRef} style={style}>
       <Card
         className={cn(
-          "cursor-pointer transition-colors",
+          "transition-colors overflow-hidden",
           selected && "border-sky-500 ring-2 ring-sky-500/20",
         )}
-        onClick={onSelect}
       >
-        <CardContent className="p-4">
-          <div className="flex items-start gap-2">
-            <button
-              type="button"
-              {...attributes}
-              {...listeners}
-              className="cursor-grab text-muted-foreground hover:text-foreground p-1"
-              onClick={(e) => e.stopPropagation()}
-              aria-label="Drag handle"
-            >
-              <GripVertical className="h-4 w-4" />
-            </button>
-            <div className="flex-1 pointer-events-none">
-              <FieldRenderer field={field} disabled />
+        <div
+          role="button"
+          tabIndex={0}
+          aria-expanded={selected}
+          onClick={onSelect}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onSelect();
+            }
+          }}
+          className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/40"
+        >
+          <CardContent className="p-4">
+            <div className="flex items-start gap-2">
+              <span
+                {...attributes}
+                {...listeners}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+                className="cursor-grab text-muted-foreground hover:text-foreground p-1 mt-1"
+                aria-label="Drag handle"
+                role="button"
+                tabIndex={0}
+              >
+                <GripVertical className="h-4 w-4" />
+              </span>
+              <div className="flex-1 pointer-events-none">
+                <FieldRenderer field={field} disabled />
+              </div>
+              <span className="text-muted-foreground mt-1.5">
+                {selected ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </span>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemove();
+                }}
+                aria-label="Remove field"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove();
-              }}
-              aria-label="Remove field"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+          </CardContent>
+        </div>
+        {selected && (
+          <div className="border-t-2 border-t-sky-500/30 bg-sky-50/50 dark:bg-sky-950/20 px-4 py-4 space-y-3">
+            <p className="text-[10px] uppercase tracking-wider text-sky-700 dark:text-sky-400 font-medium">
+              Edit field
+            </p>
+            <FieldEditorBody fieldId={field.id} />
           </div>
-        </CardContent>
+        )}
       </Card>
     </div>
   );

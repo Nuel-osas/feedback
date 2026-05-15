@@ -1,23 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   useCurrentAccount,
   useSignAndExecuteTransaction,
   useSignPersonalMessage,
 } from "@mysten/dapp-kit";
 import { Eye, ExternalLink, Loader2 } from "lucide-react";
-import Link from "next/link";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -26,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
 import { blobUrl, uploadJson } from "@/lib/walrus";
 import { shortAddress } from "@/lib/utils";
 import {
@@ -37,7 +31,7 @@ import {
 import { sealDecrypt, type SealEnvelope } from "@/lib/seal";
 import { getOrCreateSessionKey } from "@/lib/session-key";
 import { PACKAGE_ID } from "@/lib/sui";
-import type { FormSchema, Field, Submission } from "@/lib/schema";
+import type { Field, Submission } from "@/lib/schema";
 import type { SubmissionSummary } from "@/lib/indexer";
 
 const STATUS_OPTS = [
@@ -53,21 +47,16 @@ const PRIORITY_OPTS = [
   { v: "3", l: "urgent" },
 ];
 
-export function SubmissionDrawer({
-  open,
-  onClose,
+export function SubmissionDetail({
   submission,
   payload,
   formId,
   fields,
   onChanged,
 }: {
-  open: boolean;
-  onClose: () => void;
-  submission: SubmissionSummary | null;
-  payload: Submission | null;
+  submission: SubmissionSummary;
+  payload?: Submission;
   formId: string;
-  schema: FormSchema;
   fields: Field[];
   onChanged: () => void;
 }) {
@@ -85,11 +74,9 @@ export function SubmissionDrawer({
       return;
     }
     if (envelope.mode === "placeholder") {
-      // local-dev fallback: just base64-decode
       try {
         const bytes = await sealDecrypt(envelope, {
-          // unused in placeholder branch; cast satisfies the type
-          // biome-ignore lint/suspicious/noExplicitAny: placeholder path skips session key
+          // biome-ignore lint/suspicious/noExplicitAny: placeholder skips session key
           sessionKey: undefined as any,
           packageId: PACKAGE_ID,
           formId,
@@ -107,8 +94,7 @@ export function SubmissionDrawer({
       const sessionKey = await getOrCreateSessionKey({
         address: account.address,
         packageId: PACKAGE_ID,
-        signMessage: async (msg) =>
-          signPersonalMessage({ message: msg }),
+        signMessage: async (msg) => signPersonalMessage({ message: msg }),
       });
       const bytes = await sealDecrypt(envelope, {
         sessionKey,
@@ -125,10 +111,7 @@ export function SubmissionDrawer({
     }
   }
 
-  if (!submission) return null;
-
   async function changeStatus(value: string) {
-    if (!submission) return;
     setBusy(true);
     try {
       const tx = txSubmissionStatus({
@@ -147,7 +130,6 @@ export function SubmissionDrawer({
   }
 
   async function changePriority(value: string) {
-    if (!submission) return;
     setBusy(true);
     try {
       const tx = txSubmissionPriority({
@@ -166,11 +148,7 @@ export function SubmissionDrawer({
   }
 
   async function saveNotes() {
-    if (!submission || !notes.trim()) return;
-    if (!account) {
-      toast.error("Connect wallet first");
-      return;
-    }
+    if (!notes.trim() || !account) return;
     setBusy(true);
     try {
       const { blobId } = await uploadJson(
@@ -198,102 +176,109 @@ export function SubmissionDrawer({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Submission</DialogTitle>
-          <p className="text-xs text-muted-foreground font-mono">
-            {format(new Date(submission.submittedAtMs), "MMM d, yyyy HH:mm")}
-            {" · from "}
-            {shortAddress(submission.submitter)}
-          </p>
-        </DialogHeader>
+    <div className="p-5 space-y-5">
+      <div>
+        <p className="text-xs text-muted-foreground">
+          {format(new Date(submission.submittedAtMs), "MMM d, yyyy · HH:mm")}
+        </p>
+        <p className="text-sm font-mono mt-0.5">
+          from {shortAddress(submission.submitter)}
+        </p>
+      </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <Label className="text-xs">Status</Label>
-            <Select value={String(submission.status)} onValueChange={changeStatus} disabled={busy}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUS_OPTS.map((o) => (
-                  <SelectItem key={o.v} value={o.v}>
-                    {o.l}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Priority</Label>
-            <Select
-              value={String(submission.priority)}
-              onValueChange={changePriority}
-              disabled={busy}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PRIORITY_OPTS.map((o) => (
-                  <SelectItem key={o.v} value={o.v}>
-                    {o.l}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label className="text-xs">Status</Label>
+          <Select
+            value={String(submission.status)}
+            onValueChange={changeStatus}
+            disabled={busy}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTS.map((o) => (
+                <SelectItem key={o.v} value={o.v}>
+                  {o.l}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-
-        <div className="space-y-3 border-t border-border pt-4">
-          {fields.map((f) => {
-            const v = payload?.fields[f.id];
-            const decrypted = revealed[f.id];
-            return (
-              <div key={f.id} className="space-y-1">
-                <p className="text-xs font-medium">{f.label}</p>
-                <FieldDisplay
-                  field={f}
-                  value={v}
-                  decrypted={decrypted}
-                  revealing={!!revealing[f.id]}
-                  onReveal={() => {
-                    if (v?.kind === "encrypted") {
-                      revealField(f.id, v.envelope as SealEnvelope);
-                    }
-                  }}
-                />
-              </div>
-            );
-          })}
-          {!payload && (
-            <p className="text-xs text-muted-foreground">Loading payload…</p>
-          )}
+        <div className="space-y-1">
+          <Label className="text-xs">Priority</Label>
+          <Select
+            value={String(submission.priority)}
+            onValueChange={changePriority}
+            disabled={busy}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PRIORITY_OPTS.map((o) => (
+                <SelectItem key={o.v} value={o.v}>
+                  {o.l}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
+      </div>
 
-        <div className="border-t border-border pt-4 space-y-2">
-          <Label className="text-xs">Add note</Label>
-          <Textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Internal note (stored on Walrus)…"
-            rows={3}
-          />
-          <Button size="sm" variant="primary" onClick={saveNotes} disabled={busy || !notes.trim()}>
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Save note
+      <div className="space-y-3 border-t border-border pt-4">
+        {fields.map((f) => {
+          const v = payload?.fields[f.id];
+          const decrypted = revealed[f.id];
+          return (
+            <div key={f.id} className="space-y-1">
+              <p className="text-xs font-medium">{f.label}</p>
+              <FieldDisplay
+                field={f}
+                value={v}
+                decrypted={decrypted}
+                revealing={!!revealing[f.id]}
+                onReveal={() => {
+                  if (v?.kind === "encrypted") {
+                    revealField(f.id, v.envelope as SealEnvelope);
+                  }
+                }}
+              />
+            </div>
+          );
+        })}
+        {!payload && (
+          <p className="text-xs text-muted-foreground">Loading payload…</p>
+        )}
+      </div>
+
+      <div className="border-t border-border pt-4 space-y-2">
+        <Label className="text-xs">Add note</Label>
+        <Textarea
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Internal note (stored on Walrus)…"
+          rows={3}
+        />
+        <Button
+          size="sm"
+          variant="primary"
+          onClick={saveNotes}
+          disabled={busy || !notes.trim()}
+        >
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          Save note
+        </Button>
+        {submission.hasNotes && submission.notesBlobId && (
+          <Button asChild size="sm" variant="ghost">
+            <Link href={blobUrl(submission.notesBlobId)} target="_blank">
+              View existing notes <ExternalLink className="h-3 w-3" />
+            </Link>
           </Button>
-          {submission.hasNotes && submission.notesBlobId && (
-            <Button asChild size="sm" variant="ghost">
-              <Link href={blobUrl(submission.notesBlobId)} target="_blank">
-                View existing notes <ExternalLink className="h-3 w-3" />
-              </Link>
-            </Button>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -325,7 +310,14 @@ function FieldDisplay({
       );
     }
     if (field.type === "rating") {
-      return <p className="text-sm">{"★".repeat(Number(v) || 0)}{"☆".repeat(Math.max(0, (field.validation?.scale ?? 5) - (Number(v) || 0)))}</p>;
+      const scale = field.validation?.scale ?? 5;
+      const n = Number(v) || 0;
+      return (
+        <p className="text-sm">
+          {"★".repeat(n)}
+          {"☆".repeat(Math.max(0, scale - n))}
+        </p>
+      );
     }
     return <p className="text-sm whitespace-pre-line break-words">{String(v)}</p>;
   }
@@ -350,7 +342,9 @@ function FieldDisplay({
         return (
           <div className="flex flex-wrap gap-1">
             {decrypted.map((x, i) => (
-              <Badge key={i} variant="secondary">{String(x)}</Badge>
+              <Badge key={i} variant="secondary">
+                {String(x)}
+              </Badge>
             ))}
           </div>
         );
@@ -363,16 +357,18 @@ function FieldDisplay({
     }
     return (
       <div className="flex items-center gap-2">
-        <Badge variant="warning">
-          encrypted ({value.envelope.mode})
-        </Badge>
+        <Badge variant="warning">encrypted ({value.envelope.mode})</Badge>
         <button
           type="button"
           onClick={onReveal}
           disabled={revealing}
           className="text-xs underline text-sky-600 hover:text-sky-700 disabled:opacity-50 inline-flex items-center gap-1"
         >
-          {revealing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Eye className="h-3 w-3" />}
+          {revealing ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <Eye className="h-3 w-3" />
+          )}
           Reveal
         </button>
       </div>

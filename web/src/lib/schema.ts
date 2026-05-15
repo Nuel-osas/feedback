@@ -74,6 +74,9 @@ export const FormSettings = z.object({
   captcha: z.boolean().default(false),
   successMessage: z.string().default("Thanks for your submission."),
   redirectUrl: z.string().url().optional(),
+  /** "conversational" = one question per screen (Typeform-style),
+   *  "compact" = all questions on one page (default). */
+  style: z.enum(["conversational", "compact"]).default("compact"),
 });
 
 export const FormSchema = z.object({
@@ -93,6 +96,7 @@ export const FormSchema = z.object({
     onePerWallet: false,
     captcha: false,
     successMessage: "Thanks for your submission.",
+    style: "compact",
   }),
   sections: z.array(FormSection).default([]),
 });
